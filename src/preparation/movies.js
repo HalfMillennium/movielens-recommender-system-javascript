@@ -1,4 +1,5 @@
 import natural from 'natural';
+import fs from 'fs';
 
 natural.PorterStemmer.attach();
 
@@ -40,11 +41,11 @@ function prepareMovies(moviesMetaData, moviesKeywords) {
   // Normalize features based on mean and range vectors
   console.log('(6) Scaling Features \n');
   X = scaleFeatures(X, means, ranges);
-
+  //console.log({ MOVIES_BY_ID, MOVIES_IN_LIST, X })
   return {
-    MOVIES_BY_ID,
-    MOVIES_IN_LIST,
-    X,
+    MOVIES_BY_ID: MOVIES_BY_ID,
+    MOVIES_IN_LIST: MOVIES_IN_LIST,
+    X: X
   };
 }
 

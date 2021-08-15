@@ -33,13 +33,6 @@ let moviesKeywordsPromise = new Promise((resolve) =>
     .on('data', fromKeywordsFile)
     .on('end', () => resolve(MOVIES_KEYWORDS)));
 
-let ratingsPromise = new Promise((resolve) =>
-  fs
-    .createReadStream('./src/data/ratings_small.csv')
-    .pipe(csv({ headers: true }))
-    .on('data', fromRatingsFile)
-    .on('end', () => resolve(RATINGS)));
-
 function fromMetaDataFile(row) {
   MOVIES_META_DATA[row.id] = {
     id: row.id,
@@ -66,116 +59,105 @@ function fromKeywordsFile(row) {
   };
 }
 
-function fromRatingsFile(row) {
-  RATINGS.push(row);
-}
-
 console.log('Unloading data from files ... \n');
 
-Promise.all([
-  moviesMetaDataPromise,
-  moviesKeywordsPromise,
-  ratingsPromise,
-]).then(init);
+function shuffle(array) {
+  var currentIndex = array.length,  randomIndex;
 
-function init([ moviesMetaData, moviesKeywords, ratings ]) {
+  // While there remain elements to shuffle...
+  while (0 !== currentIndex) {
+
+    // Pick a remaining element...
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex--;
+
+    // And swap it with the current element.
+    [array[currentIndex], array[randomIndex]] = [
+      array[randomIndex], array[currentIndex]];
+  }
+
+  return array;
+}
+
+async function getRecommendations(liked_movies, count) {
+  let moviesMetaData = ''
+  let moviesKeywords = ''
+  moviesMetaData = await moviesMetaDataPromise.then(function(result) {
+    return result
+  })
+  moviesKeywords = await moviesKeywordsPromise.then(function(result) {
+    return result
+  })
+  
+  /*
+  When the number of liked movies exceeds [count], then
+  - Shuffle liked movies
+  - Generate recommendation for first [count] movies after shuffle (1 for each movie)
+
+  When [count] exceeds the number liked movies, then
+  - Divide [count] by # of liked movies and round up ([sub_count])
+  - Go one movie at a time and generate [sub_count] recommendations
+  - If there's a remainder, just generate [sub_count + remainder] recommendations for the first movie
+  */
+  const movieIdInfo = prepareMovies(moviesMetaData, moviesKeywords);
+  let rec_list = []
+  if(count <= liked_movies.length) {
+    let sub_liked_movies = shuffle(liked_movies).slice(0,count)
+    for(var ind in sub_liked_movies) {
+      let rec = await Promise.all([
+        movieIdInfo,
+        sub_liked_movies[ind],
+        2
+      ]).then(init);
+      rec_list = rec_list.concat(rec[1])
+    }
+    rec_list = shuffle(rec_list)
+  } else {
+    let sub_count = Math.ceil(count / liked_movies.length)
+    let boost = 0
+    let use_boost = false
+    if(liked_movies.length % sub_count > 0) {
+      boost = liked_movies.length % sub_count
+      use_boost = true
+    }
+    let i = 0
+    while(i < liked_movies.length) {
+      if(!use_boost) {
+        boost = 0
+      } else {
+        use_boost = false
+      }
+      let rec = await Promise.all([
+        movieIdInfo,
+        liked_movies[i],
+        sub_count + boost
+      ]).then(init);
+      rec.shift()
+      rec_list = rec_list.concat(rec)
+      i++
+    }
+  }
+  let movie_set = new Set(rec_list.slice(0,count))
+  console.log("Recommended movies:",Array.from(movie_set))
+  console.log(`List length: ${movie_set.size}`)
+}
+
+function init([ movieIdInfo, title, count ]) {
   /* ------------ */
   //  Preparation //
   /* -------------*/
-
-  const {
-    MOVIES_BY_ID,
-    MOVIES_IN_LIST,
-    X,
-  } = prepareMovies(moviesMetaData, moviesKeywords);
-
-  let ME_USER_RATINGS = [
-    addUserRating(ME_USER_ID, 'Terminator 3: Rise of the Machines', '5.0', MOVIES_IN_LIST),
-    addUserRating(ME_USER_ID, 'Jarhead', '4.0', MOVIES_IN_LIST),
-    addUserRating(ME_USER_ID, 'Back to the Future Part II', '3.0', MOVIES_IN_LIST),
-    addUserRating(ME_USER_ID, 'Jurassic Park', '4.0', MOVIES_IN_LIST),
-    addUserRating(ME_USER_ID, 'Reservoir Dogs', '3.0', MOVIES_IN_LIST),
-    addUserRating(ME_USER_ID, 'Men in Black II', '3.0', MOVIES_IN_LIST),
-    addUserRating(ME_USER_ID, 'Bad Boys II', '5.0', MOVIES_IN_LIST),
-    addUserRating(ME_USER_ID, 'Sissi', '1.0', MOVIES_IN_LIST),
-    addUserRating(ME_USER_ID, 'Titanic', '1.0', MOVIES_IN_LIST),
-  ];
-
-  const {
-    ratingsGroupedByUser,
-    ratingsGroupedByMovie,
-  } = prepareRatings([ ...ME_USER_RATINGS, ...ratings ]);
-
-  /* ----------------------------- */
-  //  Linear Regression Prediction //
-  //        Gradient Descent       //
-  /* ----------------------------- */
-
-  console.log('\n');
-  console.log('(A) Linear Regression Prediction ... \n');
-
-  console.log('(1) Training \n');
-  const meUserRatings = ratingsGroupedByUser[ME_USER_ID];
-  const linearRegressionBasedRecommendation = predictWithLinearRegression(X, MOVIES_IN_LIST, meUserRatings);
-
-  console.log('(2) Prediction \n');
-  console.log(sliceAndDice(linearRegressionBasedRecommendation, MOVIES_BY_ID, 10, true));
+  let MOVIES_BY_ID = movieIdInfo.MOVIES_BY_ID
+  let MOVIES_IN_LIST = movieIdInfo.MOVIES_IN_LIST
+  //console.log("MOVIES_IN_LIST:",MOVIES_IN_LIST)
+  let X = movieIdInfo.X
 
   /* ------------------------- */
   //  Content-Based Prediction //
   //  Cosine Similarity Matrix //
   /* ------------------------- */
 
-  console.log('\n');
-  console.log('(B) Content-Based Prediction ... \n');
-
-  console.log('(1) Computing Cosine Similarity \n');
-  const title = 'Batman Begins';
   const contentBasedRecommendation = predictWithContentBased(X, MOVIES_IN_LIST, title);
-
-  console.log(`(2) Prediction based on "${title}" \n`);
-  console.log(sliceAndDice(contentBasedRecommendation, MOVIES_BY_ID, 10, true));
-
-  /* ----------------------------------- */
-  //  Collaborative-Filtering Prediction //
-  //             User-Based              //
-  /* ----------------------------------- */
-
-  console.log('\n');
-  console.log('(C) Collaborative-Filtering (User-Based) Prediction ... \n');
-
-  console.log('(1) Computing User-Based Cosine Similarity \n');
-
-  const cfUserBasedRecommendation = predictWithCfUserBased(
-    ratingsGroupedByUser,
-    ratingsGroupedByMovie,
-    ME_USER_ID
-  );
-
-  console.log('(2) Prediction \n');
-  console.log(sliceAndDice(cfUserBasedRecommendation, MOVIES_BY_ID, 10, true));
-
-  /* ----------------------------------- */
-  //  Collaborative-Filtering Prediction //
-  //             Item-Based              //
-  /* ----------------------------------- */
-
-  console.log('\n');
-  console.log('(C) Collaborative-Filtering (Item-Based) Prediction ... \n');
-
-  console.log('(1) Computing Item-Based Cosine Similarity \n');
-
-  const cfItemBasedRecommendation = predictWithCfItemBased(
-    ratingsGroupedByUser,
-    ratingsGroupedByMovie,
-    ME_USER_ID
-  );
-
-  console.log('(2) Prediction \n');
-  console.log(sliceAndDice(cfItemBasedRecommendation, MOVIES_BY_ID, 10, true));
-
-  console.log('\n');
-  console.log('End ...');
+  return sliceAndDice(contentBasedRecommendation, MOVIES_BY_ID, count, false)
 }
 
 // Utility
@@ -187,7 +169,7 @@ export function addUserRating(userId, searchTitle, rating, MOVIES_IN_LIST) {
     userId,
     rating,
     movieId: id,
-    title,
+    title
   };
 }
 
@@ -213,3 +195,8 @@ export function softEval(string, escape) {
     return escape;
   }
 }
+
+module.exports = {
+  getRecommendations
+}
+getRecommendations(["Batman Begins", "Jumanji"], 5)
