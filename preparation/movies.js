@@ -1,14 +1,14 @@
-import natural from 'natural';
-import fs from 'fs';
+const natural = require('natural');
+const fs = require('fs');
 
 natural.PorterStemmer.attach();
 
 function prepareMovies(moviesMetaData, moviesKeywords) {
-  console.log('Preparing Movies ... \n');
+  //console.log('Preparing Movies ... \n');
 
   // Pre-processing movies for unified data structure
   // E.g. get overview property into same shape as studio property
-  console.log('(1) Zipping Movies');
+  //console.log('(1) Zipping Movies');
   let MOVIES_IN_LIST = zip(moviesMetaData, moviesKeywords);
   MOVIES_IN_LIST = withTokenizedAndStemmed(MOVIES_IN_LIST, 'overview');
   MOVIES_IN_LIST = fromArrayToMap(MOVIES_IN_LIST, 'overview');
@@ -16,32 +16,32 @@ function prepareMovies(moviesMetaData, moviesKeywords) {
   // Keep a map of movies for later reference
   let MOVIES_BY_ID = MOVIES_IN_LIST.reduce(byId, {});
 
-  console.log('(2) Creating Dictionaries');
+  //console.log('(2) Creating Dictionaries');
   // Preparing dictionaries for feature extraction
   let DICTIONARIES = prepareDictionaries(MOVIES_IN_LIST);
 
   // Feature Extraction:
   // Map different types to numerical values (e.g. adult to 0 or 1)
   // Map dictionaries to partial feature vectors
-  console.log('(3) Extracting Features');
+  //console.log('(3) Extracting Features');
   let X = MOVIES_IN_LIST.map(toFeaturizedMovies(DICTIONARIES));
 
   // Extract a couple of valuable coefficients
   // Can be used in a later stage (e.g. feature scaling)
-  console.log('(4) Calculating Coefficients');
+  //console.log('(4) Calculating Coefficients');
   let { means, ranges } = getCoefficients(X);
 
   // Synthesize Features:
   // Missing features (such as budget, release, revenue)
   // can be synthesized with the mean of the features
-  console.log('(5) Synthesizing Features');
+  //console.log('(5) Synthesizing Features');
   X = synthesizeFeatures(X, means, [0, 1, 2, 3, 4, 5, 6]);
 
   // Feature Scaling:
   // Normalize features based on mean and range vectors
-  console.log('(6) Scaling Features \n');
+  //console.log('(6) Scaling Features \n');
   X = scaleFeatures(X, means, ranges);
-  //console.log({ MOVIES_BY_ID, MOVIES_IN_LIST, X })
+  ////console.log({ MOVIES_BY_ID, MOVIES_IN_LIST, X })
   return {
     MOVIES_BY_ID: MOVIES_BY_ID,
     MOVIES_IN_LIST: MOVIES_IN_LIST,
@@ -49,12 +49,12 @@ function prepareMovies(moviesMetaData, moviesKeywords) {
   };
 }
 
-export function byId(moviesById, movie) {
+ function byId(moviesById, movie) {
   moviesById[movie.id] = movie;
   return moviesById;
 }
 
-export function prepareDictionaries(movies) {
+ function prepareDictionaries(movies) {
   let genresDictionary = toDictionary(movies, 'genres');
   let studioDictionary = toDictionary(movies, 'studio');
   let keywordsDictionary = toDictionary(movies, 'keywords');
@@ -76,7 +76,7 @@ export function prepareDictionaries(movies) {
   };
 }
 
-export function scaleFeatures(X, means, ranges) {
+ function scaleFeatures(X, means, ranges) {
   return X.map((row) => {
     return row.map((feature, key) => {
       return (feature - means[key]) / ranges[key];
@@ -84,7 +84,7 @@ export function scaleFeatures(X, means, ranges) {
   });
 };
 
-export function synthesizeFeatures(X, means, featureIndexes) {
+ function synthesizeFeatures(X, means, featureIndexes) {
   return X.map((row) => {
     return row.map((feature, key) => {
       if (featureIndexes.includes(key) && feature === 'undefined') {
@@ -96,7 +96,7 @@ export function synthesizeFeatures(X, means, featureIndexes) {
   });
 }
 
-export function getCoefficients(X) {
+ function getCoefficients(X) {
   const M = X.length;
 
   const initC = {
@@ -149,7 +149,7 @@ export function getCoefficients(X) {
   return { ranges, means };
 }
 
-export function toFeaturizedMovies(dictionaries) {
+ function toFeaturizedMovies(dictionaries) {
   return function toFeatureVector(movie) {
     const featureVector = [];
 
@@ -174,30 +174,30 @@ export function toFeaturizedMovies(dictionaries) {
   }
 }
 
-export function toFeaturizedRelease(movie) {
+ function toFeaturizedRelease(movie) {
   return movie.release ? Number((movie.release).slice(0, 4)) : 'undefined';
 }
 
-export function toFeaturizedAdult(movie) {
+ function toFeaturizedAdult(movie) {
   return movie.adult === 'False' ? 0 : 1;
 }
 
-export function toFeaturizedHomepage(movie) {
+ function toFeaturizedHomepage(movie) {
   return movie.homepage ? 0 : 1;
 }
 
-export function toFeaturizedLanguage(movie) {
+ function toFeaturizedLanguage(movie) {
   return movie.language === 'en' ? 1 : 0;
 }
 
-export function toFeaturizedFromDictionary(movie, dictionary, property) {
+ function toFeaturizedFromDictionary(movie, dictionary, property) {
   // Fallback, because not all movies have associated keywords
   const propertyIds = (movie[property] || []).map(value => value.id);
   const isIncluded = (value) => propertyIds.includes(value.id) ? 1 : 0;
   return dictionary.map(isIncluded);
 }
 
-export function toFeaturizedNumber(movie, property) {
+ function toFeaturizedNumber(movie, property) {
   const number = Number(movie[property]);
 
   // Fallback for NaN
@@ -228,7 +228,7 @@ export function toFeaturizedNumber(movie, property) {
 //   return 0;
 // }
 
-export function fromArrayToMap(array, property) {
+ function fromArrayToMap(array, property) {
   return array.map((value) => {
     const transformed = value[property].map((value) => ({
       id: value,
@@ -239,20 +239,20 @@ export function fromArrayToMap(array, property) {
   });
 }
 
-export function withTokenizedAndStemmed(array, property) {
+ function withTokenizedAndStemmed(array, property) {
   return array.map((value) => ({
     ...value,
     [property]: value[property].tokenizeAndStem(),
   }));
 }
 
-export function filterByThreshold(dictionary, threshold) {
+ function filterByThreshold(dictionary, threshold) {
   return Object.keys(dictionary)
     .filter(key => dictionary[key].count > threshold)
     .map(key => dictionary[key]);
 }
 
-export function toDictionary(array, property) {
+ function toDictionary(array, property) {
   const dictionary = {};
 
   array.forEach((value) => {
@@ -277,7 +277,7 @@ export function toDictionary(array, property) {
 
 // Refactored in favor of toDictionary
 
-// export function toGenresDictionary(movies) {
+//  function toGenresDictionary(movies) {
 //   const genresDictionary = {};
 
 //   movies.forEach((movie) => {
@@ -299,11 +299,13 @@ export function toDictionary(array, property) {
 //   return genresDictionary;
 // }
 
-export function zip(movies, keywords) {
+ function zip(movies, keywords) {
   return Object.keys(movies).map(mId => ({
     ...movies[mId],
     ...keywords[mId],
   }));
 }
 
-export default prepareMovies;
+module.exports = {
+  prepareMovies
+};

@@ -2,14 +2,14 @@
 // Watch https://www.youtube.com/watch?v=h9gpufJFF-0
 // Read https://datascience.stackexchange.com/questions/2598/item-based-and-user-based-recommendation-difference-in-mahout
 
-import math from 'mathjs';
+const math = require('mathjs');
 
 import {
   getCosineSimilarityRowVector,
   sortByScore,
 } from './common';
 
-export function predictWithCfUserBased(ratingsGroupedByUser, ratingsGroupedByMovie, userId) {
+ function predictWithCfUserBased(ratingsGroupedByUser, ratingsGroupedByMovie, userId) {
   const { userItem } = getMatrices(ratingsGroupedByUser, ratingsGroupedByMovie, userId);
   const { matrix, movieIds, userIndex } = userItem;
 
@@ -36,7 +36,7 @@ export function predictWithCfUserBased(ratingsGroupedByUser, ratingsGroupedByMov
   return sortByScore(predictedRatings);
 }
 
-export function predictWithCfItemBased(ratingsGroupedByUser, ratingsGroupedByMovie, userId) {
+ function predictWithCfItemBased(ratingsGroupedByUser, ratingsGroupedByMovie, userId) {
   const { itemUser } = getMatrices(ratingsGroupedByUser, ratingsGroupedByMovie, userId);
   const { matrix, movieIds, userIndex } = itemUser;
 
@@ -112,7 +112,7 @@ function getMean(rowVector) {
   return valuesWithoutZeroes.length ? math.mean(valuesWithoutZeroes) : 0;
 }
 
-export function getMatrices(ratingsGroupedByUser, ratingsGroupedByMovie, uId) {
+ function getMatrices(ratingsGroupedByUser, ratingsGroupedByMovie, uId) {
   const itemUser = Object.keys(ratingsGroupedByMovie).reduce((result, movieId) => {
     const rowVector = Object.keys(ratingsGroupedByUser).map((userId, userIndex) => {
 

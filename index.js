@@ -3,15 +3,12 @@
 // Exercise: Content-based - Make features weighted based on popularity or actors
 // Exercise: Collaborative Filtering - Model-based CF with SVD
 
-import fs from 'fs';
-import csv from 'fast-csv';
-
-import prepareRatings from './preparation/ratings';
-import prepareMovies from './preparation/movies';
-import predictWithLinearRegression from './strategies/linearRegression';
-import predictWithContentBased from './strategies/contentBased';
-import { predictWithCfUserBased, predictWithCfItemBased } from './strategies/collaborativeFiltering';
-import { getMovieIndexByTitle } from './strategies/common';
+const fs = require('fs');
+const csv = require('fast-csv')
+const prepareMovies = require('./preparation/movies').prepareMovies
+const predictWithContentBased = require('./strategies/contentBased').predictWithContentBased;
+const getMovieIndexByTitle = require('./strategies/common').getMovieIndexByTitle;
+var path = require('path');
 
 let MOVIES_META_DATA = {};
 let MOVIES_KEYWORDS = {};
@@ -21,14 +18,14 @@ let ME_USER_ID = 0;
 
 let moviesMetaDataPromise = new Promise((resolve) =>
   fs
-    .createReadStream('./src/data/movies_metadata.csv')
+    .createReadStream(path.resolve( __dirname, "./data/movies_metadata.csv" ))
     .pipe(csv({ headers: true }))
     .on('data', fromMetaDataFile)
     .on('end', () => resolve(MOVIES_META_DATA)));
 
 let moviesKeywordsPromise = new Promise((resolve) =>
   fs
-    .createReadStream('./src/data/keywords.csv')
+    .createReadStream(path.resolve( __dirname, "./data/movies_metadata.csv" ))
     .pipe(csv({ headers: true }))
     .on('data', fromKeywordsFile)
     .on('end', () => resolve(MOVIES_KEYWORDS)));
@@ -59,7 +56,7 @@ function fromKeywordsFile(row) {
   };
 }
 
-console.log('Unloading data from files ... \n');
+//console.log('Unloading data from files ... \n');
 
 function shuffle(array) {
   var currentIndex = array.length,  randomIndex;
@@ -138,8 +135,9 @@ async function getRecommendations(liked_movies, count) {
     }
   }
   let movie_set = new Set(rec_list.slice(0,count))
-  console.log("Recommended movies:",Array.from(movie_set))
-  console.log(`List length: ${movie_set.size}`)
+  //console.log("Recommended movies:",Array.from(movie_set))
+  //console.log(`List length: ${movie_set.size}`)
+  return Array.from(movie_set)
 }
 
 function init([ movieIdInfo, title, count ]) {
@@ -148,7 +146,7 @@ function init([ movieIdInfo, title, count ]) {
   /* -------------*/
   let MOVIES_BY_ID = movieIdInfo.MOVIES_BY_ID
   let MOVIES_IN_LIST = movieIdInfo.MOVIES_IN_LIST
-  //console.log("MOVIES_IN_LIST:",MOVIES_IN_LIST)
+  ////console.log("MOVIES_IN_LIST:",MOVIES_IN_LIST)
   let X = movieIdInfo.X
 
   /* ------------------------- */
@@ -162,7 +160,7 @@ function init([ movieIdInfo, title, count ]) {
 
 // Utility
 
-export function addUserRating(userId, searchTitle, rating, MOVIES_IN_LIST) {
+function addUserRating(userId, searchTitle, rating, MOVIES_IN_LIST) {
   const { id, title } = getMovieIndexByTitle(MOVIES_IN_LIST, searchTitle);
 
   return {
@@ -173,7 +171,7 @@ export function addUserRating(userId, searchTitle, rating, MOVIES_IN_LIST) {
   };
 }
 
-export function sliceAndDice(recommendations, MOVIES_BY_ID, count, onlyTitle) {
+function sliceAndDice(recommendations, MOVIES_BY_ID, count, onlyTitle) {
   recommendations = recommendations.filter(recommendation => MOVIES_BY_ID[recommendation.movieId]);
 
   recommendations = onlyTitle
@@ -184,7 +182,7 @@ export function sliceAndDice(recommendations, MOVIES_BY_ID, count, onlyTitle) {
     .slice(0, count);
 }
 
-export function softEval(string, escape) {
+function softEval(string, escape) {
   if (!string) {
     return escape;
   }
@@ -199,4 +197,3 @@ export function softEval(string, escape) {
 module.exports = {
   getRecommendations
 }
-getRecommendations(["Batman Begins", "Jumanji"], 5)

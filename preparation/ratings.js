@@ -1,5 +1,5 @@
 function prepareRatings(ratings) {
-  console.log('Preparing Ratings ... \n');
+  //console.log('Preparing Ratings ... \n');
 
   const ratingCountsByMovie = getRatingCountsByMovie(ratings);
   const ratingCountsByUser = getRatingCountsByUser(ratings);
@@ -9,7 +9,7 @@ function prepareRatings(ratings) {
     userRatings: 5, // be careful not to exclude your focused user
   };
 
-  console.log('(1) Group ratings by user');
+  //console.log('(1) Group ratings by user');
   const ratingsGroupedByUser = getRatingsGroupedByUser(
     ratings,
     ratingCountsByMovie,
@@ -17,7 +17,7 @@ function prepareRatings(ratings) {
     POPULARITY_TRESHOLD
   );
 
-  console.log('(2) Group ratings by movie \n');
+  //console.log('(2) Group ratings by movie \n');
   const ratingsGroupedByMovie = getRatingsGroupedByMovie(
     ratings,
     ratingCountsByMovie,
@@ -28,7 +28,7 @@ function prepareRatings(ratings) {
   return { ratingsGroupedByUser, ratingsGroupedByMovie };
 }
 
-export function getRatingCountsByUser(ratings) {
+ function getRatingCountsByUser(ratings) {
   return ratings.reduce((result, value) => {
     const { userId, rating } = value;
 
@@ -42,7 +42,7 @@ export function getRatingCountsByUser(ratings) {
   }, {});
 }
 
-export function getRatingCountsByMovie(ratings) {
+ function getRatingCountsByMovie(ratings) {
   return ratings.reduce((result, value) => {
     const { movieId, rating } = value;
 
@@ -56,7 +56,7 @@ export function getRatingCountsByMovie(ratings) {
   }, {});
 }
 
-export function getRatingsGroupedByMovie(ratings, ratingCountsByMovie, ratingCountsByUser, popularityThreshold) {
+ function getRatingsGroupedByMovie(ratings, ratingCountsByMovie, ratingCountsByUser, popularityThreshold) {
   const { movieRatings, userRatings } = popularityThreshold;
 
   return ratings.reduce((result, value) => {
@@ -76,7 +76,7 @@ export function getRatingsGroupedByMovie(ratings, ratingCountsByMovie, ratingCou
   }, {});
 }
 
-export function getRatingsGroupedByUser(ratings, ratingCounts, popularity) {
+ function getRatingsGroupedByUser(ratings, ratingCounts, popularity) {
   return ratings.reduce((result, value) => {
     const { userId, movieId, rating } = value;
 
@@ -94,4 +94,6 @@ export function getRatingsGroupedByUser(ratings, ratingCounts, popularity) {
   }, {});
 }
 
-export default prepareRatings;
+module.exports = {
+  prepareRatings
+};

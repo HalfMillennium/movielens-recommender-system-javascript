@@ -1,4 +1,6 @@
-import { getCosineSimilarityRowVector, sortByScore, getMovieIndexByTitle } from './common';
+const getCosineSimilarityRowVector = require('./common').getCosineSimilarityRowVector
+const sortByScore = require('./common').sortByScore
+const getMovieIndexByTitle = require('./common').getMovieIndexByTitle
 
 function predictWithContentBased(X, MOVIES_IN_LIST, title) {
   const { index } = getMovieIndexByTitle(MOVIES_IN_LIST, title);
@@ -17,4 +19,6 @@ function predictWithContentBased(X, MOVIES_IN_LIST, title) {
   return sortByScore(contentBasedRecommendation);
 }
 
-export default predictWithContentBased;
+module.exports = {
+  predictWithContentBased
+};

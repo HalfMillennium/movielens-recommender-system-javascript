@@ -1,6 +1,6 @@
-import similarity from 'compute-cosine-similarity';
+const similarity = require('compute-cosine-similarity')
 
-export function sortByScore(recommendation) {
+ function sortByScore(recommendation) {
   return recommendation.sort((a, b) => b.score - a.score);
 }
 
@@ -8,13 +8,13 @@ export function sortByScore(recommendation) {
 // 1 equals similar, -1 equals not similar, 0 equals orthogonal
 // Whole matrix is too computational expensive for 45.000 movies
 // https://en.wikipedia.org/wiki/Cosine_similarity
-export function getCosineSimilarityRowVector(matrix, index) {
+ function getCosineSimilarityRowVector(matrix, index) {
   return matrix.map((rowRelative, i) => {
     return similarity(matrix[index], matrix[i]);
   });
 }
 
-export function getMovieIndexByTitle(MOVIES_IN_LIST, query) {
+ function getMovieIndexByTitle(MOVIES_IN_LIST, query) {
   const index = MOVIES_IN_LIST.map(movie => movie.title).indexOf(query);
 
   if (!index) {
@@ -23,4 +23,10 @@ export function getMovieIndexByTitle(MOVIES_IN_LIST, query) {
 
   const { title, id } = MOVIES_IN_LIST[index];
   return { index, title, id };
+}
+
+module.exports = {
+  getMovieIndexByTitle,
+  getCosineSimilarityRowVector,
+  sortByScore
 }
